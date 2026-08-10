@@ -1,5 +1,7 @@
 # 1C Procurement Control Tower
 
+[![CI](https://github.com/sergey-lastochkin/procurement-planning/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sergey-lastochkin/procurement-planning/actions/workflows/ci.yml)
+
 ## What
 
 Python procurement-planning service designed to consume 1C operational data: synthetic stock, reservations, demand, incoming supply, safety stock and supplier offers in this reference bundle. It produces an explainable recommendation and creates only an approved draft order reference.
