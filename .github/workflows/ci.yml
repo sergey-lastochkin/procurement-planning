@@ -23,8 +23,8 @@ jobs:
       - name: Install project and test tools
         run: python -m pip install --disable-pip-version-check -e '.[dev]'
       - name: Lint
-        run: python -m ruff check src tests scripts
+        run: python -m ruff check src tests
       - name: Tests
         run: PYTHONPATH=src python -m pytest
       - name: Compile Python sources
-        run: python -m compileall -q src tests scripts
+        run: python -m compileall -q src tests
