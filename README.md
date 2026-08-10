@@ -42,6 +42,8 @@ python3.12 -m venv .venv
 
 The suite contains more than 20 deterministic business scenarios.
 
+CI also runs `ruff` and `compileall` over the code and synthetic fixtures. It does not contact 1C, n8n or supplier systems.
+
 ## Limitations
 
 - No live 1C/n8n/supplier connection or automatic order posting.
