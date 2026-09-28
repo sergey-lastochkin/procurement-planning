@@ -1,53 +1,70 @@
-# 1C Procurement Control Tower
+# Планирование закупок для 1С: объяснимый выбор поставщика
 
 [![CI](https://github.com/sergey-lastochkin/procurement-planning/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sergey-lastochkin/procurement-planning/actions/workflows/ci.yml)
 
-## What
+**Расчёт потребности и выбор поставщика с учётом остатков, резервов, MOQ,
+кратности упаковки, срока поставки и свежести предложения.** Каждая рекомендация
+объясняет, почему выбран один поставщик и отклонены остальные; черновик заказа
+создаётся только после утверждения.
 
-Python procurement-planning service designed to consume 1C operational data: synthetic stock, reservations, demand, incoming supply, safety stock and supplier offers in this reference bundle. It produces an explainable recommendation and creates only an approved draft order reference.
+## Какую проблему решает
 
-## Why
+Выбор «по самой низкой цене» игнорирует, есть ли у поставщика остаток, минимальную
+партию, кратность, срок поставки и то, не устарело ли предложение. В итоге заказ
+либо не выполняется, либо закупается не то количество. Здесь все жёсткие
+ограничения проверяются до скоринга, а предпочтения влияют на оценку, но не
+обходят ограничения.
 
-Choosing the lowest unit price ignores available balance, MOQ, pack rounding, minimum order value, stock, lead time, reliability, currency and data freshness. A locked supplier also has different semantics from a preference. This engine evaluates every hard constraint before scoring.
+## Для кого
 
-## Architecture
+- Компании, где закупщики вручную считают потребность по данным из 1С.
+- Разработчики, которым нужен проверенный тестами расчёт для обработки
+  «Формирование заказов поставщикам».
 
-- Immutable inventory and offer inputs with validation.
-- Pure shortage, pack and minimum-value quantity calculations.
-- Policy-driven feasibility and explainable score components.
-- Recommendation evidence containing every candidate and rejected constraint.
-- Approval service with deterministic IDs and idempotent draft creation.
-- Generator for a 500 SKU × 5 supplier synthetic functional scenario, not a load benchmark.
-
-## Key engineering decisions
-
-- `available = physical - reserved`; projected balance includes demand and incoming.
-- Stale, over-lead, under-stock or unknown-currency offers cannot silently win.
-- An infeasible locked supplier forbids automatic fallback.
-- Preferences affect score but never bypass a hard constraint.
-- Approval and draft creation preserve a recommendation fingerprint.
-
-## Run
+## Запуск за 2 минуты
 
 ```bash
+git clone https://github.com/sergey-lastochkin/procurement-planning.git
+cd procurement-planning
 python3.12 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip
-.venv/bin/python -m pip install -e .
-```
-
-## Test
-
-```bash
 .venv/bin/python -m pip install -e '.[dev]'
 .venv/bin/python -m pytest -q
+PYTHONPATH=src .venv/bin/python examples/demo.py
 ```
 
-The suite contains more than 20 deterministic business scenarios.
+## Пример результата
 
-CI also runs `ruff` and `compileall` over the code and synthetic fixtures. It does not contact 1C, n8n or supplier systems.
+`examples/demo.py`: на складе 40, в резерве 25, спрос 60, в пути 10, страховой
+запас 20. Два предложения — дешевле, но с остатком 30, и чуть дороже с остатком 500:
 
-## Limitations
+```text
+дефицит: 55
+поставщик: Надёжный | количество: 75 | статус: calculated
+причина: ['shortage 55', 'selected Надёжный', 'MOQ 50', 'pack 25', 'lead 2d', 'score 767.50']
+  Дешёвый отклонён ['insufficient_stock']
+  Надёжный допустим []
+```
 
-- No live 1C/n8n/supplier connection or automatic order posting.
-- Currency conversion requires an explicit future rate provider; foreign offers currently require review.
-- `bsl/PurchaseOrderDraft.bsl` is an illustrative configuration-mapped adapter, not runtime-tested on a 1C platform.
+Дефицит 55 округлён вверх до кратности упаковки 25 с учётом MOQ 50 → 75.
+
+Ключевые правила:
+
+- `доступно = на складе − резерв`; прогноз учитывает спрос и поступления.
+- Устаревшее, слишком долгое, без остатка или в неизвестной валюте предложение не
+  может выиграть молча.
+- Если закреплённый поставщик не проходит ограничения, автоматической замены нет.
+- Утверждение и создание черновика идемпотентны и сохраняют отпечаток рекомендации.
+
+Более 20 детерминированных бизнес-сценариев в `tests/`, генератор синтетического
+набора 500 SKU × 5 поставщиков — функциональный сценарий, не нагрузочный тест.
+
+## Ограничения
+
+- Данные синтетические; живого подключения к 1С, n8n или поставщикам нет.
+- Для валютных предложений нужен источник курсов; пока они уходят на проверку.
+- `bsl/PurchaseOrderDraft.bsl` иллюстрирует адаптер к 1С и не запускался на платформе.
+
+## Автор и контакты
+
+Сергей Ласточкин — интеграции и автоматизация вокруг 1С и Python.
+Telegram: [@metaanswer](https://t.me/metaanswer).
